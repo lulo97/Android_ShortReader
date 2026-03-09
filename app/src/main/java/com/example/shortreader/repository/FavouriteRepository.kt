@@ -11,7 +11,19 @@ import com.example.shortreader.models.WordDetail
 class FavouriteRepository(private val context: Context) {
     private val dbHelper = DatabaseHelper.getInstance(context)
     private val wordDetailRepository = WordDetailRepository(context)
-
+    fun isFavourite(word: String): Boolean {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            """SELECT 1 FROM favourite_words f
+           JOIN word_details w ON f.word_detail_id = w.id
+           WHERE w.word = ? COLLATE NOCASE LIMIT 1""",
+            arrayOf(word)
+        )
+        val exists = cursor.count > 0
+        cursor.close()
+        db.close()
+        return exists
+    }
     fun getAllFavourites(): List<FavouriteItem> {
         val favourites = mutableListOf<FavouriteItem>()
         val db = dbHelper.readableDatabase

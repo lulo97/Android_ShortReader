@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.example.shortreader.models.FavouriteItem
 import com.example.shortreader.service.FavouriteService
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 @Composable
@@ -19,13 +20,13 @@ fun FavouriteTab(activity: ComponentActivity) {
     var favourites by remember { mutableStateOf<List<FavouriteItem>>(emptyList()) }
     var selectedItem by remember { mutableStateOf<FavouriteItem?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var refreshTrigger by remember { mutableStateOf(0) }
 
-    LaunchedEffect(Unit) {
-        activity.lifecycleScope.launch {
-            favouriteService.getAllFavourites().collect { favouriteList ->
-                favourites = favouriteList
-                isLoading = false
-            }
+    LaunchedEffect(refreshTrigger) {
+        isLoading = true
+        favouriteService.getAllFavourites().collect { favouriteList ->
+            favourites = favouriteList
+            isLoading = false
         }
     }
 
@@ -61,20 +62,15 @@ fun FavouriteTab(activity: ComponentActivity) {
         }
     }
 
-    selectedItem?.let {
+    selectedItem?.let { item ->
         AlertDialog(
             onDismissRequest = { selectedItem = null },
-            confirmButton = {
-                TextButton(onClick = { selectedItem = null }) {
-                    Text("Close")
-                }
-            },
             title = {
                 Column {
-                    Text(it.word)
-                    if (it.pronunciation != null) {
+                    Text(item.word)
+                    if (item.pronunciation != null) {
                         Text(
-                            text = it.pronunciation,
+                            text = item.pronunciation,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -82,29 +78,53 @@ fun FavouriteTab(activity: ComponentActivity) {
             },
             text = {
                 Column {
-                    if (it.partOfSpeech != null) {
+                    if (item.partOfSpeech != null) {
                         Text(
-                            text = it.partOfSpeech,
+                            text = item.partOfSpeech,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                     }
 
-                    Text("Meaning: ${it.meaning}")
+                    Text("Meaning: ${item.meaning}")
 
-                    if (!it.example.isNullOrBlank()) {
+                    if (!item.example.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Divider()
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Example: ${it.example}")
+                        val exampleText = item.example?.replace("\\n", "\n") ?: ""
+
+                        Text("Example: ${exampleText}")
                     }
 
-                    if (!it.notes.isNullOrBlank()) {
+                    if (!item.notes.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Divider()
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("My notes: ${it.notes}")
+                        Text("My notes: ${item.notes}")
+                    }
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.End) {
+                    Button(
+                        onClick = {
+                            activity.lifecycleScope.launch {
+                                favouriteService.deleteFavourite(item.word).collect()
+                                refreshTrigger++
+                                selectedItem = null
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Remove")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = { selectedItem = null }) {
+                        Text("Close")
                     }
                 }
             }

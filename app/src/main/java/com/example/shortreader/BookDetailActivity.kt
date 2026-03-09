@@ -16,7 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import com.example.shortreader.models.WordDetail
+import com.example.shortreader.models.FavouriteItem
 import com.example.shortreader.repository.WordDetailRepository
+import com.example.shortreader.service.FavouriteService
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class BookDetailActivity : ComponentActivity() {
@@ -134,6 +137,7 @@ fun BookDetailScreen(title: String, text: String, activity: ComponentActivity) {
         WordExplainDialog(
             word = selectedWord!!,
             wordDetail = wordDetail,
+            activity = activity,
             onDismiss = {
                 selectedWord = null
                 wordDetail = null
@@ -141,13 +145,22 @@ fun BookDetailScreen(title: String, text: String, activity: ComponentActivity) {
         )
     }
 }
-
 @Composable
 fun WordExplainDialog(
     word: String,
     wordDetail: WordDetail?,
+    activity: ComponentActivity,
     onDismiss: () -> Unit
 ) {
+    val favouriteService = remember { FavouriteService(activity) }
+    var isFavourite by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    // Load current favourite status
+    LaunchedEffect(word) {
+        isFavourite = favouriteService.isFavourite(word)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -188,7 +201,6 @@ fun WordExplainDialog(
                             color = MaterialTheme.colorScheme.secondary
                         )
                         val exampleText = wordDetail.example?.replace("\\n", "\n") ?: ""
-
                         Text(
                             text = exampleText,
                             style = MaterialTheme.typography.bodyMedium
@@ -203,8 +215,40 @@ fun WordExplainDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) {
-                Text("Close")
+            Row(horizontalArrangement = Arrangement.End) {
+                if (wordDetail != null) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                if (isFavourite) {
+                                    favouriteService.deleteFavourite(word).collect()
+                                } else {
+                                    val item = FavouriteItem(
+                                        word = wordDetail.word,
+                                        meaning = wordDetail.meaning,
+                                        example = wordDetail.example,
+                                        partOfSpeech = wordDetail.partOfSpeech,
+                                        pronunciation = wordDetail.pronunciation,
+                                        notes = null
+                                    )
+                                    favouriteService.addFavourite(item).collect()
+                                }
+                                // Update local state
+                                isFavourite = !isFavourite
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isFavourite) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(if (isFavourite) "Remove" else "Add")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Button(onClick = onDismiss) {
+                    Text("Close")
+                }
             }
         }
     )

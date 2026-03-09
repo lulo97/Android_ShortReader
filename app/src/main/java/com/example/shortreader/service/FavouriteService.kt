@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 
 class FavouriteService(private val context: Context) {
     private val repository = FavouriteRepository(context)
@@ -26,4 +27,8 @@ class FavouriteService(private val context: Context) {
     fun searchFavourites(query: String): Flow<List<FavouriteItem>> = flow {
         emit(repository.searchFavourites(query))
     }.flowOn(Dispatchers.IO)
+
+    suspend fun isFavourite(word: String): Boolean = withContext(Dispatchers.IO) {
+        repository.isFavourite(word)
+    }
 }
