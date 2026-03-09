@@ -24,7 +24,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         executeSqlScript(db, "database/01_create_tables.sql")
         executeSqlScript(db, "database/02_seed_books.sql")
         executeSqlScript(db, "database/03_seed_exercises.sql")
-        executeSqlScript(db, "database/04_seed_favourites.sql")
+        executeSqlScript(db, "database/04_seed_word_details.sql")
+        executeSqlScript(db, "database/05_seed_favourites.sql")
         Log.d(TAG, "Database creation completed")
     }
 

@@ -8,6 +8,7 @@ function shouldInclude(file) {
     return (
         file.endsWith(".kt") ||
         file.endsWith(".sql") ||
+        file.endsWith("common-english-viet-words.txt") ||
         file.toLowerCase() === "androidmanifest.xml"
     );
 }
