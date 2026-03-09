@@ -51,15 +51,3 @@ INSERT OR IGNORE INTO word_details (word, meaning, example, part_of_speech, pron
 ('this', 'Used to identify a specific person or thing close at hand', 'This is my house.', 'determiner', '/ðɪs/'),
 ('that', 'Used to identify a specific person or thing observed', 'That car is fast.', 'determiner', '/ðæt/'),
 ('it', 'Used to refer to a thing previously mentioned', 'The book - have you read it?', 'pronoun', '/ɪt/');
-
--- Then, add some words to favourites (referencing word_details)
-INSERT OR IGNORE INTO favourite_words (word_detail_id, notes) VALUES
-((SELECT id FROM word_details WHERE word = 'curious'), 'My favorite word from Alice'),
-((SELECT id FROM word_details WHERE word = 'rabbit'), 'The White Rabbit character'),
-((SELECT id FROM word_details WHERE word = 'deduction'), 'Key to solving mysteries'),
-((SELECT id FROM word_details WHERE word = 'mysterious'), 'Great for describing stories'),
-((SELECT id FROM word_details WHERE word = 'adventure'), 'Perfect for travel'),
-((SELECT id FROM word_details WHERE word = 'ancient'), 'Useful for history topics'),
-((SELECT id FROM word_details WHERE word = 'brilliant'), 'Positive adjective'),
-((SELECT id FROM word_details WHERE word = 'get'), 'Most common verb'),
-((SELECT id FROM word_details WHERE word = 'sitting'), 'From Alice in Wonderland');
