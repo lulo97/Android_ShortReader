@@ -17,13 +17,24 @@ CREATE TABLE IF NOT EXISTS exercises (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create favourite_words table
-CREATE TABLE IF NOT EXISTS favourite_words (
+-- Create word_details table (stores all word meanings and examples)
+CREATE TABLE IF NOT EXISTS word_details (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     word TEXT NOT NULL UNIQUE,
     meaning TEXT NOT NULL,
     example TEXT,
+    part_of_speech TEXT,
+    pronunciation TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create favourite_words table (now references word_details)
+CREATE TABLE IF NOT EXISTS favourite_words (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    word_detail_id INTEGER NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (word_detail_id) REFERENCES word_details(id) ON DELETE CASCADE
 );
 
 -- Create bookmarks table for user progress
@@ -34,3 +45,6 @@ CREATE TABLE IF NOT EXISTS bookmarks (
     last_read_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (book_id) REFERENCES books(id)
 );
+
+-- Create index for faster word lookups
+CREATE INDEX IF NOT EXISTS idx_word_details_word ON word_details(word);

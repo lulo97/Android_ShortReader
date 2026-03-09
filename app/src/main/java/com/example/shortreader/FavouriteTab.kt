@@ -43,7 +43,17 @@ fun FavouriteTab(activity: ComponentActivity) {
                         .clickable { selectedItem = item }
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(item.word, style = MaterialTheme.typography.titleLarge)
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Text(item.word, style = MaterialTheme.typography.titleLarge)
+                            if (item.partOfSpeech != null) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "(${item.partOfSpeech})",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                         Text(item.meaning)
                     }
                 }
@@ -59,12 +69,43 @@ fun FavouriteTab(activity: ComponentActivity) {
                     Text("Close")
                 }
             },
-            title = { Text(it.word) },
+            title = {
+                Column {
+                    Text(it.word)
+                    if (it.pronunciation != null) {
+                        Text(
+                            text = it.pronunciation,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
             text = {
                 Column {
+                    if (it.partOfSpeech != null) {
+                        Text(
+                            text = it.partOfSpeech,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
                     Text("Meaning: ${it.meaning}")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Example: ${it.example}")
+
+                    if (!it.example.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Divider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Example: ${it.example}")
+                    }
+
+                    if (!it.notes.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Divider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("My notes: ${it.notes}")
+                    }
                 }
             }
         )

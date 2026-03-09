@@ -5,7 +5,6 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -14,6 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.lifecycleScope
+import com.example.shortreader.models.WordDetail
+import com.example.shortreader.repository.WordDetailRepository
+import kotlinx.coroutines.launch
 
 class BookDetailActivity : ComponentActivity() {
 
@@ -25,16 +28,18 @@ class BookDetailActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                BookDetailScreen(title, text)
+                BookDetailScreen(title, text, this)
             }
         }
     }
 }
 
 @Composable
-fun BookDetailScreen(title: String, text: String) {
+fun BookDetailScreen(title: String, text: String, activity: ComponentActivity) {
 
-    var explainWord by remember { mutableStateOf<String?>(null) }
+    var selectedWord by remember { mutableStateOf<String?>(null) }
+    var wordDetail by remember { mutableStateOf<WordDetail?>(null) }
+    val wordDetailRepository = WordDetailRepository(activity)
 
     Column(
         modifier = Modifier
@@ -71,10 +76,17 @@ fun BookDetailScreen(title: String, text: String) {
                                     val end = textView.selectionEnd
 
                                     if (start >= 0 && end > start) {
-                                        val selected =
-                                            textView.text.substring(start, end)
+                                        val selected = textView.text
+                                            .substring(start, end)
+                                            .trim()
+                                            .lowercase()
 
-                                        explainWord = selected
+                                        selectedWord = selected
+
+                                        // Look up the word meaning from database
+                                        activity.lifecycleScope.launch {
+                                            wordDetail = wordDetailRepository.findWordDetail(selected)
+                                        }
                                     }
 
                                     mode?.finish()
@@ -103,10 +115,14 @@ fun BookDetailScreen(title: String, text: String) {
         )
     }
 
-    explainWord?.let { word ->
+    if (selectedWord != null) {
         WordExplainDialog(
-            word = word,
-            onDismiss = { explainWord = null }
+            word = selectedWord!!,
+            wordDetail = wordDetail,
+            onDismiss = {
+                selectedWord = null
+                wordDetail = null
+            }
         )
     }
 }
@@ -114,35 +130,65 @@ fun BookDetailScreen(title: String, text: String) {
 @Composable
 fun WordExplainDialog(
     word: String,
+    wordDetail: WordDetail?,
     onDismiss: () -> Unit
 ) {
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(word) },
-        text = { Text(getFakeMeaning(word)) },
+        title = {
+            Column {
+                Text(text = word)
+                if (wordDetail?.pronunciation != null) {
+                    Text(
+                        text = wordDetail.pronunciation,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        text = {
+            if (wordDetail != null) {
+                Column {
+                    if (wordDetail.partOfSpeech != null) {
+                        Text(
+                            text = wordDetail.partOfSpeech,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    Text(
+                        text = wordDetail.meaning,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+
+                    if (!wordDetail.example.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Divider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Example:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Text(
+                            text = "\"${wordDetail.example}\"",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "Definition of \"$word\" not found in the dictionary.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        },
         confirmButton = {
             Button(onClick = onDismiss) {
                 Text("Close")
             }
         }
     )
-}
-
-fun getFakeMeaning(word: String): String {
-
-    return when (word.lowercase()) {
-
-        "mysterious" ->
-            "Difficult to understand or explain."
-
-        "ancient" ->
-            "Very old; from a long time ago."
-
-        "legend" ->
-            "A traditional story regarded as historical."
-
-        else ->
-            "Definition of \"$word\" not found."
-    }
 }

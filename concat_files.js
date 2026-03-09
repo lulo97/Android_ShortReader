@@ -7,6 +7,7 @@ const OUTPUT_FILE = "all_code.txt";
 function shouldInclude(file) {
     return (
         file.endsWith(".kt") ||
+        file.endsWith(".sql") ||
         file.toLowerCase() === "androidmanifest.xml"
     );
 }

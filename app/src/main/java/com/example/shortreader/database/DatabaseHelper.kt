@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
+import com.example.shortreader.utils.DevConfig
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -29,16 +30,40 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         Log.d(TAG, "Upgrading database from $oldVersion to $newVersion")
+        recreateDatabase(db)
+        onCreate(db)  // Recreate tables after dropping
+    }
+
+    override fun onOpen(db: SQLiteDatabase) {
+        super.onOpen(db)
+
+        // In development mode, check if we should recreate the database
+        if (DevConfig.DROP_DATABASE_ON_START) {
+            Log.d(TAG, "Development mode: Recreating database from scratch")
+
+            // Drop all tables
+            recreateDatabase(db)
+
+            // Recreate tables and seed data
+            onCreate(db)
+        }
+    }
+
+    private fun recreateDatabase(db: SQLiteDatabase) {
+        Log.d(TAG, "Recreating database - dropping all tables")
         db.execSQL("DROP TABLE IF EXISTS books")
         db.execSQL("DROP TABLE IF EXISTS exercises")
         db.execSQL("DROP TABLE IF EXISTS favourite_words")
         db.execSQL("DROP TABLE IF EXISTS bookmarks")
-        onCreate(db)
+        db.execSQL("DROP TABLE IF EXISTS word_details")
     }
 
     private fun executeSqlScript(db: SQLiteDatabase, scriptPath: String) {
         try {
-            Log.d(TAG, "Executing script: $scriptPath")
+            if (DevConfig.LOG_DATABASE_OPERATIONS) {
+                Log.d(TAG, "Executing script: $scriptPath")
+            }
+
             appContext.assets.open(scriptPath).use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).use { reader ->
                     val sql = StringBuilder()
@@ -49,7 +74,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                             sql.append(trimmedLine)
                             if (trimmedLine.endsWith(";")) {
                                 val sqlStatement = sql.toString()
-                                Log.d(TAG, "Executing SQL: $sqlStatement")
+                                if (DevConfig.LOG_DATABASE_OPERATIONS) {
+                                    Log.d(TAG, "Executing SQL: $sqlStatement")
+                                }
                                 try {
                                     db.execSQL(sqlStatement)
                                 } catch (e: Exception) {
@@ -63,7 +90,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                     }
                 }
             }
-            Log.d(TAG, "Successfully executed script: $scriptPath")
+            if (DevConfig.LOG_DATABASE_OPERATIONS) {
+                Log.d(TAG, "Successfully executed script: $scriptPath")
+            }
         } catch (e: IOException) {
             Log.e(TAG, "Error reading SQL file: $scriptPath", e)
         } catch (e: Exception) {
@@ -88,5 +117,16 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         }
         db.close()
         return false
+    }
+
+    // Clear all data but keep tables
+    fun clearAllData() {
+        val db = writableDatabase
+        db.execSQL("DELETE FROM books")
+        db.execSQL("DELETE FROM exercises")
+        db.execSQL("DELETE FROM favourite_words")
+        db.execSQL("DELETE FROM bookmarks")
+        db.close()
+        Log.d(TAG, "All data cleared from database")
     }
 }
