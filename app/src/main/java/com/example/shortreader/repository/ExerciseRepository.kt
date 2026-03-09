@@ -6,7 +6,7 @@ import com.example.shortreader.database.ExerciseEntity
 import com.example.shortreader.models.Exercise
 
 class ExerciseRepository(private val context: Context) {
-    private val dbHelper = DatabaseHelper(context)
+    private val dbHelper = DatabaseHelper.getInstance(context)
 
     fun getAllExercises(): List<Exercise> {
         val exercises = mutableListOf<Exercise>()

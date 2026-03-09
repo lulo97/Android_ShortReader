@@ -9,12 +9,22 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "shortreader.db"
         private const val DATABASE_VERSION = 1
         private const val TAG = "DatabaseHelper"
+        private var hasRecreatedThisRun = false
+
+
+        @Volatile private var instance: DatabaseHelper? = null
+
+        fun getInstance(context: Context): DatabaseHelper {
+            return instance ?: synchronized(this) {
+                instance ?: DatabaseHelper(context.applicationContext).also { instance = it }
+            }
+        }
     }
 
     private val appContext = context.applicationContext
@@ -22,7 +32,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     override fun onCreate(db: SQLiteDatabase) {
         Log.d(TAG, "Creating database and executing seed scripts")
         executeSqlScript(db, "database/01_create_tables.sql")
-        executeSqlScript(db, "database/02_seed_books.sql")
+        executeSqlScript(db, "books/books.sql")
         executeSqlScript(db, "database/03_seed_exercises.sql")
         executeSqlScript(db, "database/04_seed_word_details.sql")
         executeSqlScript(db, "database/05_seed_favourites.sql")
@@ -37,15 +47,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
-
-        // In development mode, check if we should recreate the database
-        if (DevConfig.DROP_DATABASE_ON_START) {
-            Log.d(TAG, "Development mode: Recreating database from scratch")
-
-            // Drop all tables
+        if (DevConfig.DROP_DATABASE_ON_START && !hasRecreatedThisRun) {
+            hasRecreatedThisRun = true
+            Log.d(TAG, "Development mode: Recreating database from scratch (once per run)")
             recreateDatabase(db)
-
-            // Recreate tables and seed data
             onCreate(db)
         }
     }
@@ -58,44 +63,69 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         db.execSQL("DROP TABLE IF EXISTS bookmarks")
         db.execSQL("DROP TABLE IF EXISTS word_details")
     }
-
     private fun executeSqlScript(db: SQLiteDatabase, scriptPath: String) {
         try {
             if (DevConfig.LOG_DATABASE_OPERATIONS) {
                 Log.d(TAG, "Executing script: $scriptPath")
             }
 
+            db.beginTransaction()
+
             appContext.assets.open(scriptPath).use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).use { reader ->
                     val sql = StringBuilder()
+                    var insideString = false
+                    var stringQuoteChar = '\''
+
                     reader.forEachLine { line ->
-                        // Skip comments and empty lines
-                        val trimmedLine = line.trim()
-                        if (trimmedLine.isNotEmpty() && !trimmedLine.startsWith("--")) {
-                            sql.append(trimmedLine)
-                            if (trimmedLine.endsWith(";")) {
-                                val sqlStatement = sql.toString()
-                                if (DevConfig.LOG_DATABASE_OPERATIONS) {
-                                    Log.d(TAG, "Executing SQL: $sqlStatement")
+                        // Check if we're inside a quoted string
+                        for (i in line.indices) {
+                            val c = line[i]
+
+                            // Toggle insideString when we encounter quotes (not escaped)
+                            if (c == '\'' || c == '"') {
+                                if (i > 0 && line[i-1] != '\\') { // Not escaped
+                                    insideString = !insideString
+                                    stringQuoteChar = c
                                 }
-                                try {
-                                    db.execSQL(sqlStatement)
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Error executing SQL: $sqlStatement", e)
-                                }
-                                sql.clear()
-                            } else {
-                                sql.append(" ")
                             }
+                        }
+
+                        val trimmedLine = line.trim()
+
+                        if (trimmedLine.isNotEmpty() && !trimmedLine.startsWith("--")) {
+                            if (insideString) {
+                                // If we're inside a string, preserve the line as-is including newlines
+                                sql.append(line).append('\n')
+                            } else {
+                                // Normal SQL processing
+                                sql.append(trimmedLine)
+
+                                if (trimmedLine.endsWith(";")) {
+                                    val statement = sql.toString()
+
+                                    try {
+                                        db.execSQL(statement)
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "SQL error: $statement", e)
+                                    }
+
+                                    sql.clear()
+                                } else {
+                                    sql.append(" ")
+                                }
+                            }
+                        } else if (insideString && !trimmedLine.startsWith("--")) {
+                            // Preserve empty lines inside strings
+                            sql.append('\n')
                         }
                     }
                 }
             }
-            if (DevConfig.LOG_DATABASE_OPERATIONS) {
-                Log.d(TAG, "Successfully executed script: $scriptPath")
-            }
-        } catch (e: IOException) {
-            Log.e(TAG, "Error reading SQL file: $scriptPath", e)
+
+            db.setTransactionSuccessful()
+            db.endTransaction()
+
         } catch (e: Exception) {
             Log.e(TAG, "Error executing SQL script: $scriptPath", e)
         }

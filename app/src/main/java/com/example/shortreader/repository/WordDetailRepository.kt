@@ -7,7 +7,7 @@ import com.example.shortreader.database.WordDetailEntity
 import com.example.shortreader.models.WordDetail
 
 class WordDetailRepository(private val context: Context) {
-    private val dbHelper = DatabaseHelper(context)
+    private val dbHelper = DatabaseHelper.getInstance(context)
 
     fun findWordDetail(word: String): WordDetail? {
         val db = dbHelper.readableDatabase

@@ -9,7 +9,7 @@ import com.example.shortreader.database.DatabaseHelper
 import com.example.shortreader.models.Book
 
 class BookRepository(private val context: Context) {
-    private val dbHelper = DatabaseHelper(context)
+    private val dbHelper = DatabaseHelper.getInstance(context)
 
     fun getAllBooks(): List<Book> {
         val books = mutableListOf<Book>()
@@ -20,6 +20,13 @@ class BookRepository(private val context: Context) {
             while (cursor.moveToNext()) {
                 val entity = BookEntity.fromCursor(cursor)
                 books.add(entity.toBook())
+
+                // Check for newlines in full_text
+                if (!entity.fullText.contains("\n")) {
+                    throw Exception(
+                        "Book '${entity.title}' missing newlines in text"
+                    )
+                }
             }
         } finally {
             cursor.close()

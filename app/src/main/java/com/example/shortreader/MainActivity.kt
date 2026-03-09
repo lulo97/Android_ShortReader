@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
 
         // Initialize database with better error handling
         try {
-            val dbHelper = DatabaseHelper(this)
+            val dbHelper = DatabaseHelper.getInstance(this)
             val database = dbHelper.writableDatabase
 
             // Check if database was properly populated

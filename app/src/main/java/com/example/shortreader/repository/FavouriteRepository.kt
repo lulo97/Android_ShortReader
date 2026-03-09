@@ -9,7 +9,7 @@ import com.example.shortreader.models.FavouriteItem
 import com.example.shortreader.models.WordDetail
 
 class FavouriteRepository(private val context: Context) {
-    private val dbHelper = DatabaseHelper(context)
+    private val dbHelper = DatabaseHelper.getInstance(context)
     private val wordDetailRepository = WordDetailRepository(context)
 
     fun getAllFavourites(): List<FavouriteItem> {

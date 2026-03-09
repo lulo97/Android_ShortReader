@@ -5,10 +5,15 @@ const ROOT_DIR = process.cwd();
 const OUTPUT_FILE = "all_code.txt";
 
 function shouldInclude(file) {
+    if (file.endsWith("common-english-viet-words.txt") ||
+        file.endsWith("04_seed_word_details.sql") ||
+        file.endsWith("vocabularies.json")) {
+        return false
+    }
     return (
         file.endsWith(".kt") ||
         file.endsWith(".sql") ||
-        file.endsWith("common-english-viet-words.txt") ||
+
         file.toLowerCase() === "androidmanifest.xml"
     );
 }

@@ -1,6 +1,7 @@
 package com.example.shortreader
 
 import android.os.Bundle
+import android.util.Log
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
@@ -40,7 +41,13 @@ fun BookDetailScreen(title: String, text: String, activity: ComponentActivity) {
     var selectedWord by remember { mutableStateOf<String?>(null) }
     var wordDetail by remember { mutableStateOf<WordDetail?>(null) }
     val wordDetailRepository = WordDetailRepository(activity)
-
+    if (!text.contains("\n")) {
+        throw IllegalArgumentException(
+            "Invalid text format: Missing newline characters.\n" +
+                    "Expected: Multiline text with '\\n' separators\n" +
+                    "Received: '$text' (length: ${text.length})"
+        )
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,8 +67,16 @@ fun BookDetailScreen(title: String, text: String, activity: ComponentActivity) {
 
                 val textView = TextView(context).apply {
                     this.text = text
+
+                    // Print the text to Logcat
+                    Log.d("TextViewDebug", "Text content: '$text'")
+                    // Or to see escaped characters:
+                    Log.d("TextViewDebug", "Text with escapes: " + text.replace("\n", "\\n"))
+
+
                     textSize = 18f
                     setTextIsSelectable(true)
+                    setLineSpacing(8f, 1.2f)
                 }
 
                 textView.setCustomSelectionActionModeCallback(
@@ -172,8 +187,10 @@ fun WordExplainDialog(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.secondary
                         )
+                        val exampleText = wordDetail.example?.replace("\\n", "\n") ?: ""
+
                         Text(
-                            text = "\"${wordDetail.example}\"",
+                            text = exampleText,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
