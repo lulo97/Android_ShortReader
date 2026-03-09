@@ -8,52 +8,50 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.example.shortreader.models.FavouriteItem
+import com.example.shortreader.service.FavouriteService
+import kotlinx.coroutines.launch
 
 @Composable
 fun FavouriteTab(activity: ComponentActivity) {
-
-    val favourites = listOf(
-        FavouriteItem(
-            "Curiosity",
-            "Strong desire to know something",
-            "Her curiosity led her to explore the cave."
-        ),
-        FavouriteItem(
-            "Brilliant",
-            "Very intelligent",
-            "She had a brilliant idea."
-        )
-    )
-
+    val favouriteService = FavouriteService(activity)
+    var favourites by remember { mutableStateOf<List<FavouriteItem>>(emptyList()) }
     var selectedItem by remember { mutableStateOf<FavouriteItem?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
 
-    LazyColumn(modifier = Modifier.padding(16.dp)) {
-
-        items(favourites) { item ->
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-                    .clickable { selectedItem = item }
-            ) {
-
-                Column(modifier = Modifier.padding(16.dp)) {
-
-                    Text(item.word, style = MaterialTheme.typography.titleLarge)
-                    Text(item.meaning)
-
-                }
-
+    LaunchedEffect(Unit) {
+        activity.lifecycleScope.launch {
+            favouriteService.getAllFavourites().collect { favouriteList ->
+                favourites = favouriteList
+                isLoading = false
             }
-
         }
+    }
 
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            CircularProgressIndicator(modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
+        }
+    } else {
+        LazyColumn(modifier = Modifier.padding(16.dp)) {
+            items(favourites) { item ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .clickable { selectedItem = item }
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(item.word, style = MaterialTheme.typography.titleLarge)
+                        Text(item.meaning)
+                    }
+                }
+            }
+        }
     }
 
     selectedItem?.let {
-
         AlertDialog(
             onDismissRequest = { selectedItem = null },
             confirmButton = {
@@ -70,7 +68,5 @@ fun FavouriteTab(activity: ComponentActivity) {
                 }
             }
         )
-
     }
-
 }

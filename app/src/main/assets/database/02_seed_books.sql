@@ -1,0 +1,4 @@
+-- Insert sample books
+INSERT OR IGNORE INTO books (title, word_count, preview, full_text) VALUES
+('Alice in Wonderland', 500, 'Alice was beginning to get very tired of sitting...', 'Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, "and what is the use of a book," thought Alice "without pictures or conversation?"'),
+('Sherlock Holmes', 800, 'To Sherlock Holmes she is always the woman...', 'To Sherlock Holmes she is always the woman. I have seldom heard him mention her under any other name. In his eyes she eclipses and predominates the whole of her sex. It was not that he felt any emotion akin to love for Irene Adler.');
